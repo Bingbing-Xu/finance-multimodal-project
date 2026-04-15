@@ -1,0 +1,24 @@
+# ArkMSA CoI Stage Requirements
+# CoI阶段依赖包
+
+# 核心依赖
+openai>=1.0.0          # OpenAI API（如果使用GPT-4V）
+requests>=2.25.0        # HTTP请求
+Pillow>=8.0.0          # 图像处理
+numpy>=1.21.0          # 数值计算
+tqdm>=4.62.0           # 进度条显示
+
+# 可选依赖（用于MiniGPT4）
+# torch>=1.13.0          # PyTorch
+# torchvision>=0.14.0    # TorchVision
+# transformers>=4.22.0   # HuggingFace Transformers
+# accelerate>=0.12.0     # 加速训练
+
+# 开发依赖
+pytest>=6.0.0          # 测试框架
+black>=21.0.0          # 代码格式化
+flake8>=3.9.0          # 代码检查
+
+# 日志和配置
+pyyaml>=5.4.0          # YAML配置
+python-dotenv>=0.19.0  # 环境变量

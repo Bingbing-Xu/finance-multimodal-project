@@ -1,0 +1,16 @@
+torch>=2.0.0
+torchvision
+transformers>=4.30.0
+datasets
+accelerate
+peft
+bitsandbytes
+openai>=1.0.0
+pandas
+numpy
+scikit-learn
+pillow
+tqdm
+pyyaml
+matplotlib
+seaborn

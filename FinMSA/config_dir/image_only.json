@@ -1,0 +1,12 @@
+{
+    "data_dir": "./data/Stock",
+    "batch_size": 5,
+    "epochs": 10,
+    "lr": 1e-3,
+    "seed": 789,
+    "drop_out": 0.5,
+    "weight_decay": 0.0,
+    "device": "cuda:0",
+    "image_model": "resnet50",
+    "save_name": "image_only_resnet"
+}
