@@ -4,6 +4,7 @@ from models.BERT_cls import BERT_cls
 from models.BERT_mlm import BERT_mlm
 import json
 from collections import Counter
+import sys
 from argparse import ArgumentParser
 from config import Config, _MODEL_CLASSES
 from framework import CLS_framework, MLM_framework, MLM_plus_framework
@@ -15,25 +16,25 @@ import warnings
 
 import inspect
 
-
 warnings.filterwarnings("ignore")
 
 
-"""def set_seed(seed):
+def set_seed(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False"""
+    torch.backends.cudnn.benchmark = False
 
 if __name__ == '__main__':
 
     parser = ArgumentParser(description="Config for MMSD")
-    parser.add_argument('--config', default='config_dir/StockKnow.ini')
+    parser.add_argument('--config', default='/home/remance/文档/xbb/project/FinMSA/config_dir/StockKnow.ini')
     args = parser.parse_args()
     config = Config(args.config)
+    print(config.__dict__)
     paths = {'bert': config.bert_path,
              'roberta': config.roberta_path,
              'finbert': config.finbert_path

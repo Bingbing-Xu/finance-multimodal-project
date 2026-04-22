@@ -105,7 +105,7 @@ class QwenVLAdapter(MLLMInterface):
         return ""
 
     def generate_description(self, text: str, image_path: str) -> str:
-        """生成图像描述（CoT Step 1）- 金融股票特化"""
+        """生成图像描述（CoT Step 1）- 最终优化版"""
         base64_image = self._encode_image_to_base64(image_path)
 
         messages = [
@@ -118,7 +118,25 @@ class QwenVLAdapter(MLLMInterface):
                     },
                     {
                         "type": "text",
-                        "text": f"""Here are financial social media posts about stock markets, composed of text and images. The text mentions: <{text}>. Note that text and image may be misaligned (e.g., bullish text with bearish chart, or sarcastic "to the moon" with crashing price), so analyze carefully. Focus on: stock tickers, candlestick patterns (green/red), price trends, trading volumes, technical indicators (MA/MACD/RSI), or financial memes (diamond hands, rocket emojis). Provide a concise description within <20> words emphasizing financial signals."""
+                        "text": f"""You are a financial image analyst. Analyze the provided image, which is associated with the social media text: <{text}>.
+    Your task is to generate a concise, evidence-grounded visual description for downstream sentiment analysis.
+
+    Follow these steps:
+    1. **Identify Image Type**: Determine whether the image is a candlestick chart, line chart, bar/volume chart, technical indicator panel, trading screenshot, portfolio/PnL screenshot, news screenshot, earnings table, multi-panel financial graphic, or financial meme.
+    2. **Extract Key Visual Evidence**: Describe only what is clearly visible:
+       - Price action: recent trend (up/down/sideways), breakout/breakdown, and apparent support/resistance.
+       - Technical signals: clearly labeled moving average crossovers, volume spikes, RSI/MACD extremes or crossovers.
+       - Legible text: ticker symbols, prices, percentage changes, headlines, dates, and visible gains/losses.
+    3. **Synthesize**: Summarize the most decision-relevant visual financial signal(s) in the image.
+
+    Requirements:
+    - Focus only on the image itself. The accompanying social media text is context only; do not use it as evidence unless the same information is explicitly visible in the image.
+    - Do not infer sentiment labels.
+    - Do not invent unseen data, values, indicators, or patterns.
+    - Use cautious language for unclear details, such as "appears" or "not clearly legible."
+    - Prefer the single most salient financial signal over exhaustive detail.
+    - Output only the description, with no extra text.
+    - Length: 20-40 words, preferably 1 sentence; use 2 short sentences only if the image contains multiple distinct signals."""
                     }
                 ]
             }
@@ -133,23 +151,50 @@ class QwenVLAdapter(MLLMInterface):
         label_map = {"-1": "Bearish/Negative", "0": "Neutral", "1": "Bullish/Positive"}
         label_name = label_map.get(label, "Neutral")
 
-        prompt = f"""Based on the text and image description provided, analyze the stock market sentiment towards <{target}>.
+        prompt = f"""You are an expert financial sentiment analyst. Analyze the multimodal sentiment towards **{target}** based on the following inputs.
 
-Text: {text}
-Image Description: {description}
-Correct Sentiment: {label_name}
+**Input Data**
+- Target Stock: {target}
+- Text: {text}
+- Image Description: {description}
+- Correct Sentiment Label: {label_name}
 
-Provide a detailed explanation of why the sentiment towards {target} is {label_name}. Consider:
-1. Financial terminology (bullish/bearish, support/resistance, FOMO, panic selling, diamond hands, YOLO, short squeeze)
-2. Multimodal alignment: Does the chart contradict the text? (e.g., "going to moon" text with red candlestick crash, or "buy the dip" with breakdown pattern)
-3. Visual trading signals: Candlestick patterns (hammer, engulfing, doji), volume spikes, breakout/breakdown levels, green/red color psychology, all-time-high/low markers
+**Part 1: Financial Sentiment Definitions for Social Media Posts**
+- **Bullish/Positive**: A post should be labeled as Bullish/Positive if it expresses or implies that the target stock is likely to rise in the short term, or if it conveys information that would typically support a favorable market reaction. Signals may include optimistic interpretations of earnings or company developments, positive catalysts, buy or hold recommendations, favorable analyst views, or technical indicators suggesting upward momentum (e.g., breakout above resistance, support holding, strong accumulation). In social media contexts, informal expressions, slang, emojis, hashtags, or exaggerated language should be interpreted based on their overall trading implication rather than their surface tone alone.
 
-Your response should include:
-1. The sentiment classification
-2. A detailed reasoning explaining how text and/or image support this classification, with attention to financial-specific signals (ticker mentions, price action, technical indicators, market psychology)
-3. Mention of specific financial elements (chart patterns, trading keywords, numerical price data, WSB terminology) that influenced the decision
+- **Bearish/Negative**: A post should be labeled as Bearish/Negative if it expresses or implies that the target stock is likely to fall in the short term, or if it conveys information that would typically trigger an unfavorable market reaction. Signals may include pessimistic interpretations of earnings or guidance, negative company news, sell or short recommendations, dilution concerns, regulatory or operational risks, or technical indicators suggesting downward pressure (e.g., breakdown below support, lower lows, heavy selling). In social media contexts, negative sentiment should be labeled as Bearish only when it implies downside risk for the target stock.
 
-Format: Sentiment: {label_name}. [Your detailed reasoning here]"""
+- **Neutral**: A post should be labeled as Neutral if it does not convey a clear directional stance toward the target stock, if its implied market effect is weak or ambiguous, or if bullish and bearish signals are balanced. This includes factual statements without clear evaluation, reposted news without added opinion, questions, watchlist-style comments, or posts with conflicting signals that do not support a reliable bullish or bearish interpretation.
+
+- **Annotation Principle**: Labels should be assigned according to the **net implied short-term trading stance** toward the target stock, rather than the writer's general emotion or the stock's actual future movement. Focus on context, discourse intent, and trading implication. If the target stock is unclear, the post discusses only the broader market without a clear stance on the target stock, or no reliable directional implication can be inferred, the label should be Neutral.
+
+**Part 2: Chain-of-Thought Reasoning**
+Follow this structure strictly to provide a detailed explanation of why the sentiment towards {target} is {label_name}:
+
+1.  **Step 1: Text Analysis (Unimodal)**
+    - Identify key phrases, financial terms, sentiment cues, emojis, slang, or hashtags in the text: "{text}".
+    - Based *only* on the text, what is the implied short-term trading stance towards {target}? State the conclusion and the supporting evidence.
+
+2.  **Step 2: Image Analysis (Unimodal)**
+    - Analyze the visual signals based *only* on the image description: "{description}".
+    - What specific financial elements (e.g., candlestick patterns, volume, trend lines, technical indicators, chart annotations) are present?
+    - Based *only* on the image, what is the implied short-term trading stance towards {target}? State the conclusion and the supporting evidence.
+
+3.  **Step 3: Cross-Modal Consistency & Conflict Resolution**
+    - Compare the conclusions from Step 1 (text) and Step 2 (image).
+    - Determine if the text and image are **Aligned** (both imply the same directional stance), **Complementary** (provide different but reinforcing evidence for the same stance), or **Conflicting** (e.g., bullish text with a bearish chart pattern).
+    - **If Conflicting**: Identify the most plausible interpretation (e.g., sarcasm, outdated chart, text referring to a different aspect, or the image being a meme that contradicts the text). Explain why, after conflict resolution, the net implied trading stance leans towards {label_name}.
+
+4.  **Step 4: Final Integrated Conclusion**
+    - Synthesize the findings from the previous steps into a final, coherent reasoning.
+    - Clearly state the final sentiment: **{label_name}**.
+    - Explain how the integrated evidence from both modalities (or the resolution of a conflict) supports this final classification, keeping the annotation principle (net implied short-term trading stance) in mind.
+
+**Output Format**:
+Text Sentiment: [Implied stance and evidence]
+Image Sentiment: [Implied stance and evidence]
+Consistency Analysis: [Aligned/Complementary/Conflicting] - [Explanation]
+Final Sentiment: {label_name}. [Final integrated reasoning]"""
 
         messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
         return self._call_api(messages)
@@ -339,15 +384,26 @@ def main():
     """主函数"""
     API_KEY = "sk-dd8f7e873129418b9524512102865ec0"
 
+    #config = {
+     #   "image_dir": "/home/remance/文档/xbb/FinancialDataset/images",
+      #  "input_data": "/home/remance/文档/xbb/FinancialDataset/tsv/train.tsv",
+       # "output_dir": "./coi_output_finance_plus",
+     #   "model_name": "qwen3-vl-plus",
+     #   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+     #   "delay": 2.0,  # API调用间隔（秒）
+     #   "save_interval": 1000
+    #}
+
     config = {
-        "image_dir": "D:/PythonProjects/finance_research/FinancialDataset/images",
-        "input_data": "D:/PythonProjects/finance_research/FinancialDataset/tsv/train.tsv",
-        "output_dir": "./coi_output_finance",
-        "model_name": "qwen3-vl-plus",
+        "image_dir": "/home/remance/文档/xbb/FinancialDataset/images",
+        "input_data": "/home/remance/文档/xbb/FinancialDataset/tsv/train_safe.tsv",
+        "output_dir": "./coi_output_finance_max",
+        "model_name": "qwen-vl-max",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "delay": 2.0,  # API调用间隔（秒）
         "save_interval": 1000
     }
+
 
     # 初始化适配器
     adapter = QwenVLAdapter(
@@ -379,7 +435,7 @@ def main():
     results = processor.process_batch(raw_data, save_interval=config["save_interval"])
 
     if results:
-        processor.save_results(results, "coi_final_results.json")
+        processor.save_results(results, "train.json")
         logger.info(f"完成！共处理 {len(results)} 条，API调用次数: {adapter.api_call_count}")
 
 

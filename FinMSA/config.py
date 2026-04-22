@@ -23,7 +23,7 @@ _MODEL_CLASSES = {
         'encoder': AutoModelForMaskedLM,
         'model': DebertaModel
     },
-'finbert': {
+    'finbert': {
         'config': BertConfig,
         'tokenizer': BertTokenizer,
         'encoder':BertForMaskedLM,

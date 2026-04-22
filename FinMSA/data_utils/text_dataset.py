@@ -1007,9 +1007,18 @@ class StockKnow(object):
             answer_template = template.replace(self.tokenizer.mask_token, sentiments[label])
 
             # 主输入（包含模板和 content）
-            all_candidates = [(template, content)]
-            sent_feature = self.tokenizer.batch_encode_plus(
-                all_candidates,
+            #all_candidates = [template +content]
+            #sent_feature = self.tokenizer.batch_encode_plus(
+            #    all_candidates,
+            #    return_token_type_ids=True,
+            #    max_length=self.max_length,
+            #    truncation=True,
+            #    padding="max_length",
+            #    return_tensors='pt'
+            #)
+            sent_feature = self.tokenizer(
+                text=template,
+                text_pair=content,
                 return_token_type_ids=True,
                 max_length=self.max_length,
                 truncation=True,
@@ -1022,9 +1031,20 @@ class StockKnow(object):
                 reason = ' '.join(reasons[i].strip().split()[:self.config.reserve_length])
             else:
                 reason = ''
-            reason_candidates = [(answer_template + content, reason)]
-            reason_feature = self.tokenizer.batch_encode_plus(
-                reason_candidates,
+            #reason_candidates = [(answer_template + content, reason)]
+            #reason_feature = self.tokenizer.batch_encode_plus(
+            #    reason_candidates,
+            #    return_token_type_ids=True,
+            #    max_length=self.max_length,
+            #    truncation=True,
+            #    padding="max_length",
+            #    return_tensors='pt'
+            #）
+
+            reason_input_text = answer_template + content
+            reason_feature = self.tokenizer(
+                text=reason_input_text,
+                text_pair=reason,
                 return_token_type_ids=True,
                 max_length=self.max_length,
                 truncation=True,
